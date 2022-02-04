@@ -3,39 +3,72 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct Status {
-    etag: String,
-    actions: Actions,
-    can_seek: u8,
-    current_image: String,
-    cursor: i64,
-    db: i64,
-    image: String,
-    indexing: i64,
-    mid: i64,
-    mode: i64,
-    mute: u8,
-    pid: i64,
-    prid: u8,
-    repeat: u8,
-    shuffle: u8,
-    sid: i64,
-    sleep: bool,
-    song: i64,
-    state: String,
-    stream_url: String,
-    sync_stat: i64,
-    title1: String,
-    title2: String,
-    volume: i64,
+    pub etag: String,
+
+    //Playback
+    pub name: Option<String>,
+    pub album: Option<String>,
+    pub artist: Option<String>,
+    #[serde(rename = "totlen")]
+    pub total_length: Option<i64>,
+
+    pub quality: Option<Quality>,
+    #[serde(rename = "fn")]
+    pub filename: Option<String>,
+
+    //Display
+    pub image: String,
+    pub title1: Option<String>,
+    pub title2: Option<String>,
+    pub title3: Option<String>,
+
+    pub actions: Option<Actions>,
+    pub can_seek: u8,
+    pub current_image: Option<String>,
+    pub cursor: i64,
+    pub db: i64,
+    pub indexing: i64,
+    pub mid: i64,
+    pub mode: i64,
+    pub mute: u8,
+    pub pid: i64,
+    pub prid: u8,
+    pub repeat: u8,
+    pub shuffle: u8,
+    pub sid: i64,
+    pub sleep: bool,
+    pub song: i64,
+    pub state: State,
+    pub stream_url: Option<String>,
+    pub sync_stat: i64,
+    pub volume: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Actions {
-    action: Vec<Action>,
+    pub action: Vec<Action>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Action {
-    hide: u8,
-    name: String,
+    pub hide: u8,
+    pub name: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum State {
+    Stop,
+    Play,
+    Pause,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum Quality {
+    Cd,
+    Hd,
+    DolbyAudio,
+    Mqa,
+    MqaAuthored,
 }
