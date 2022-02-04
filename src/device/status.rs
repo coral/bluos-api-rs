@@ -18,10 +18,10 @@ pub struct Status {
     /// If the player is muted, then this contains the unmuted volume level.
     /// Values are from 0 to 100.
     #[serde(rename = "muteVolume")]
-    pub muted_volume: i64,
+    pub muted_volume: Option<i64>,
     /// If the player is muted, then this contains the unmuted volume in dB.
     #[serde(rename = "muteDb")]
-    pub muted_decibel: i64,
+    pub muted_decibel: Option<i64>,
 
     ////////////////
     // Playback
@@ -112,8 +112,6 @@ pub struct Status {
     pub prid: u8,
 
     pub sid: i64,
-    /// The minutes remaining before the sleep timer activates.
-    pub sleep: Option<i64>,
     /// The current player state. It could be play, pause, stop, stream, connecting, etc.
     /// /Play can be used to resume when in a pause state but not when in stop state
     pub state: String,
