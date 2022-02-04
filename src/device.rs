@@ -1,8 +1,15 @@
+mod status;
+
+pub use status::Status;
+
 use crate::error::Error;
-use async_dnssd::StreamTimeoutExt;
-use futures::TryStreamExt;
-use serde::{Deserialize, Serialize};
+use std::any::Any;
+use std::net::Ipv4Addr;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::mpsc;
+use zeroconf::prelude::*;
+use zeroconf::{MdnsBrowser, ServiceDiscovery, ServiceType};
 
 pub struct BluOS {
     hostname: String,
@@ -11,55 +18,9 @@ pub struct BluOS {
     client: reqwest::Client,
 }
 
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct BluOsStatus {
-    pub status: Status,
-}
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
-pub struct Status {
-    etag: String,
-    actions: Actions,
-    can_seek: u8,
-    current_image: String,
-    cursor: i64,
-    db: i64,
-    image: String,
-    indexing: i64,
-    mid: i64,
-    mode: i64,
-    mute: u8,
-    pid: i64,
-    prid: u8,
-    repeat: u8,
-    shuffle: u8,
-    sid: i64,
-    sleep: bool,
-    song: i64,
-    state: String,
-    stream_url: String,
-    sync_stat: i64,
-    title1: String,
-    title2: String,
-    volume: i64,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct Actions {
-    action: Vec<Action>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
-pub struct Action {
-    hide: u8,
-    name: String,
-}
-
 impl BluOS {
     pub async fn new() -> Result<BluOS, Error> {
         let (hostname, port) = BluOS::discover().await?;
-        dbg!(&hostname, &port);
         Ok(BluOS {
             hostname,
             port,
@@ -67,28 +28,55 @@ impl BluOS {
         })
     }
 
+    pub async fn new_from_ip(addr: Ipv4Addr) -> Result<BluOS, Error> {
+        Ok(BluOS {
+            hostname: addr.to_string(),
+            port: 11000,
+            client: reqwest::Client::new(),
+        })
+    }
+
     async fn discover() -> Result<(String, u16), Error> {
-        let search_timeout = Duration::from_secs(10);
-        let resolve_timeout = Duration::from_secs(3);
+        let (tx, mut rx) = mpsc::channel(200);
+        let (ctx, crx) = std::sync::mpsc::channel();
 
-        let query = "_musc._tcp";
+        tokio::task::spawn_blocking(move || {
+            let mut browser = MdnsBrowser::new(ServiceType::new("musc", "tcp").unwrap());
 
-        //Need to pin this for some reason lol?
-        let mut query_result = Box::pin(async_dnssd::browse(query).timeout(search_timeout));
+            browser.set_service_discovered_callback(Box::new(
+                move |result: zeroconf::Result<ServiceDiscovery>,
+                      _context: Option<Arc<dyn Any>>| {
+                    let res = result.unwrap();
+                    let _ = tx.blocking_send(res);
+                },
+            ));
 
-        //Only one in my network lol this is so DIRTY but w/e
-        let res = query_result.try_next().await?.ok_or(Error::NoBluOSError)?;
+            let event_loop = browser.browse_services().unwrap();
 
-        let mut resolve = Box::pin(res.resolve().timeout(resolve_timeout));
-        let bluos = resolve.try_next().await?.ok_or(Error::NoBluOSError)?;
+            loop {
+                event_loop.poll(Duration::from_millis(500)).unwrap();
 
-        Ok((bluos.host_target, bluos.port))
+                match crx.try_recv() {
+                    Ok(_) => return,
+                    Err(e) => match e {
+                        std::sync::mpsc::TryRecvError::Empty => {}
+                        std::sync::mpsc::TryRecvError::Disconnected => return,
+                    },
+                }
+            }
+        });
+
+        let m = rx.recv().await.ok_or(Error::NoBluOSError)?;
+
+        ctx.send(true)?;
+
+        Ok((m.address().clone(), m.port().clone()))
     }
 
     pub async fn get_status(&self) -> Result<Status, Error> {
         let resp = self
             .client
-            .get(format!("http://{}:{}/Reindex", self.hostname, self.port))
+            .get(format!("http://{}:{}/Status", self.hostname, self.port))
             .send()
             .await?;
 

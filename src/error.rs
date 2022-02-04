@@ -14,6 +14,9 @@ pub enum Error {
     #[error(transparent)]
     XMLError(#[from] serde_xml_rs::Error),
 
+    #[error(transparent)]
+    CancelError(#[from] std::sync::mpsc::SendError<bool>),
+
     #[error("IDK BRO")]
     Unknown,
 }
