@@ -11,7 +11,7 @@ repository = "https://github.com/coral/bluos-api-rs"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-tokio = { version = "1.16.1", features = ["full"], optional = true }
+tokio = { version = "1.16.1", features = ["macros", "rt-multi-thread"], optional = true }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0.30"
 futures = "0.3.19"
