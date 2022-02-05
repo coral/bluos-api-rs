@@ -1,7 +1,7 @@
 
 # BluOS API wrappers for Rust
 
-These are ergonomic wrappers around the [BluOS semi-documneted API](https://bluos.net/wp-content/uploads/2021/03/Custom-Integration-API-v1.0_March-2021.pdf). It ships with discovery using mDNS so you do not have to mess with finding out what the IP is for your BluOS device.
+These are ergonomic wrappers around the [BluOS semi-documented API](https://bluos.net/wp-content/uploads/2021/03/Custom-Integration-API-v1.0_March-2021.pdf). It ships with discovery using mDNS so you do not have to mess with finding out what the IP is for your BluOS device.
 
 Why would you want this in Rust? Doesn't it make more sense to do something like this in Python or Node? Who would ever use this in Rust? **GOOD QUESTIONS OFTEN LACKS GOOD ANSWERS**
 
