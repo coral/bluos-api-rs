@@ -1,8 +1,13 @@
+mod command;
 mod status;
 
-pub use status::Status;
+use command::Command;
+use reqwest::Response;
+use status::StateResponse;
+pub use status::{State, Status};
 
 use crate::error::Error;
+use serde::Deserialize;
 use std::any::Any;
 use std::net::Ipv4Addr;
 use std::sync::Arc;
@@ -34,6 +39,10 @@ impl BluOS {
             port: 11000,
             client: reqwest::Client::new(),
         })
+    }
+
+    fn cmd(&self, action: &str) -> Command {
+        Command::new(&self.hostname, self.port, action)
     }
 
     async fn discover() -> Result<(String, u16), Error> {
@@ -73,25 +82,57 @@ impl BluOS {
         Ok((m.address().clone(), m.port().clone()))
     }
 
-    pub async fn get_status(&self) -> Result<Status, Error> {
-        let resp = self
-            .client
-            .get(format!("http://{}:{}/Status", self.hostname, self.port))
-            .send()
-            .await?;
+    pub async fn command(&self, cmd: Command) -> Result<Response, Error> {
+        Ok(self.client.get(cmd.build()).send().await?)
+    }
 
-        let text = &resp.text().await?;
-        let status: Status = serde_xml_rs::from_str(text)?;
+    pub async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
+        let t = self.client.get(cmd.build()).send().await?.text().await?;
+        dbg!(&t);
+        Ok(serde_xml_rs::from_str(&t)?)
+    }
+
+    pub async fn status(&self) -> Result<Status, Error> {
+        let status: Status = self.command_response(self.cmd("Status")).await?;
 
         Ok(status)
     }
 
     pub async fn update_library(&self) -> Result<(), Error> {
-        self.client
-            .get(format!("http://{}:{}/Reindex", self.hostname, self.port))
-            .send()
-            .await?;
+        self.command(self.cmd("Reindex")).await?;
 
         Ok(())
+    }
+
+    ///////////////////
+    // Playback functions
+    ///////////////////
+
+    /// Plays whatever source is currently active
+    pub async fn play(&self) -> Result<State, Error> {
+        Ok(self.play_with_options(None, None, None).await?)
+    }
+
+    /// Play with the ability to define options
+    /// - seek: time to seek in the track, max is total_length from status of the track
+    /// - input_type:  Selects an input before starting playback.
+    /// Possible values for inputType are: analog, spdif, hdmi or bluetooth.
+    /// - index: For players with more than one input, this indicates which input of the specified
+    /// type to play. Used only with inputType parameter. Default value is 1.
+    pub async fn play_with_options(
+        &self,
+        seek: Option<i64>,
+        input_type: Option<String>,
+        index: Option<i64>,
+    ) -> Result<State, Error> {
+        let mut cmd = self.cmd("Play");
+
+        cmd.add_optional("seek", seek);
+        cmd.add_optional("inputType", input_type);
+        cmd.add_optional("index", index);
+
+        let state: StateResponse = self.command_response(cmd).await?;
+
+        Ok(state.state)
     }
 }

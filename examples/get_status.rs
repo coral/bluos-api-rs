@@ -5,7 +5,9 @@ use bluos_api_rs::BluOS;
 async fn main() -> Result<()> {
     let n = BluOS::new().await?;
 
-    let status = n.get_status().await?;
+    let status = n.status().await?;
     dbg!(status);
+
+    dbg!(n.play().await?);
     Ok(())
 }

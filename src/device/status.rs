@@ -54,7 +54,7 @@ pub struct Status {
     /// • mqa – valid MQA audio decoded
     /// • mqaAuthored - valid MQA-Authored audio decoded
     /// A numeric value is the approximate bitrate of a compressed audio source quality of the file.
-    pub quality: Option<String>,
+    pub quality: Option<Quality>,
     #[serde(rename = "fn")]
     pub filename: Option<String>,
     ////////////////
@@ -72,7 +72,7 @@ pub struct Status {
     pub title3: Option<String>,
 
     /// The first of two lines describing the current audio.
-    ///  twoline_title1 & twoline_title2, if present, MUST be used as the text of any UI that displays two
+    /// twoline_title1 & twoline_title2, if present, MUST be used as the text of any UI that displays two
     /// lines of now-playing metadata.
     pub twoline_title1: Option<String>,
     /// The second of two lines describing the current audio.
@@ -93,8 +93,8 @@ pub struct Status {
     // Abiltes
     /////////////////
     pub actions: Option<Actions>,
-    pub can_seek: u8,
-    pub can_move_playback: bool,
+    pub can_seek: Option<u8>,
+    pub can_move_playback: Option<bool>,
 
     ////////////////
     // System
@@ -156,4 +156,11 @@ pub enum Quality {
     DolbyAudio,
     Mqa,
     MqaAuthored,
+    Bitrate(i64),
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct StateResponse {
+    pub state: State,
 }
