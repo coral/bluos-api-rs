@@ -1,21 +1,19 @@
 mod command;
-mod status;
-
-use command::Command;
-use reqwest::Response;
-use status::StateResponse;
-pub use status::{State, Status};
+mod responses;
 
 use crate::error::Error;
+use command::Command;
+use reqwest::Response;
+use responses::StateResponse;
+pub use responses::{IdResponse, Playlist, State, Status};
 use serde::Deserialize;
-use std::any::Any;
 use std::net::Ipv4Addr;
-use std::sync::Arc;
-use std::time::Duration;
-use tokio::sync::mpsc;
-use zeroconf::prelude::*;
-use zeroconf::{MdnsBrowser, ServiceDiscovery, ServiceType};
 
+#[cfg(feature = "discover")]
+use crate::DiscoveredBluOSDevice;
+
+// Documented here
+// https://bluos.net/wp-content/uploads/2021/03/Custom-Integration-API-v1.0_March-2021.pdf
 pub struct BluOS {
     hostname: String,
     port: u16,
@@ -24,62 +22,30 @@ pub struct BluOS {
 }
 
 impl BluOS {
-    pub async fn new() -> Result<BluOS, Error> {
-        let (hostname, port) = BluOS::discover().await?;
+    pub fn new(addr: Ipv4Addr, custom_port: Option<u16>) -> Result<BluOS, Error> {
+        let port = match custom_port {
+            Some(v) => v,
+            None => 11000,
+        };
+
         Ok(BluOS {
-            hostname,
+            hostname: addr.to_string(),
             port,
             client: reqwest::Client::new(),
         })
     }
 
-    pub async fn new_from_ip(addr: Ipv4Addr) -> Result<BluOS, Error> {
+    #[cfg(feature = "discover")]
+    pub fn new_from_discovered(d: DiscoveredBluOSDevice) -> Result<BluOS, Error> {
         Ok(BluOS {
-            hostname: addr.to_string(),
-            port: 11000,
+            hostname: d.hostname,
+            port: d.port,
             client: reqwest::Client::new(),
         })
     }
 
     fn cmd(&self, action: &str) -> Command {
         Command::new(&self.hostname, self.port, action)
-    }
-
-    async fn discover() -> Result<(String, u16), Error> {
-        let (tx, mut rx) = mpsc::channel(200);
-        let (ctx, crx) = std::sync::mpsc::channel();
-
-        tokio::task::spawn_blocking(move || {
-            let mut browser = MdnsBrowser::new(ServiceType::new("musc", "tcp").unwrap());
-
-            browser.set_service_discovered_callback(Box::new(
-                move |result: zeroconf::Result<ServiceDiscovery>,
-                      _context: Option<Arc<dyn Any>>| {
-                    let res = result.unwrap();
-                    let _ = tx.blocking_send(res);
-                },
-            ));
-
-            let event_loop = browser.browse_services().unwrap();
-
-            loop {
-                event_loop.poll(Duration::from_millis(500)).unwrap();
-
-                match crx.try_recv() {
-                    Ok(_) => return,
-                    Err(e) => match e {
-                        std::sync::mpsc::TryRecvError::Empty => {}
-                        std::sync::mpsc::TryRecvError::Disconnected => return,
-                    },
-                }
-            }
-        });
-
-        let m = rx.recv().await.ok_or(Error::NoBluOSError)?;
-
-        ctx.send(true)?;
-
-        Ok((m.address().clone(), m.port().clone()))
     }
 
     pub async fn command(&self, cmd: Command) -> Result<Response, Error> {
@@ -132,7 +98,101 @@ impl BluOS {
         cmd.add_optional("index", index);
 
         let state: StateResponse = self.command_response(cmd).await?;
-
         Ok(state.state)
     }
+    /// Pause playback
+    /// - toggle: If set to 1, then the current pause state is toggled.
+    pub async fn pause(&self, toggle: bool) -> Result<State, Error> {
+        let mut cmd = self.cmd("Pause");
+        if toggle {
+            cmd.add_param("toggle", 1);
+        }
+        let state: StateResponse = self.command_response(cmd).await?;
+        Ok(state.state)
+    }
+    /// Stop playback
+    pub async fn stop(&self) -> Result<State, Error> {
+        let state: StateResponse = self.command_response(self.cmd("Stop")).await?;
+        Ok(state.state)
+    }
+    /// Skip: Skip to the next audio track in the play queue
+    pub async fn skip(&self) -> Result<IdResponse, Error> {
+        let id: IdResponse = self.command_response(self.cmd("Skip")).await?;
+        Ok(id)
+    }
+    /// Back: If a track is playing and has been playing for more than four seconds, then back, will return to the start of the track.
+    /// Otherwise, the back command will go to the previous song in the current playlist. If on the first song in the playlist
+    /// calling back will go to the last song. It will go to the previous or first track in the queue regardless of the state of
+    /// the repeat setting.
+    pub async fn back(&self) -> Result<IdResponse, Error> {
+        let id: IdResponse = self.command_response(self.cmd("Back")).await?;
+        Ok(id)
+    }
+
+    /// Shuffle
+    /// The shuffle command creates a new queue by shuffling the current queue.
+    /// The original (not shuffled) queue is retained for restore when shuffle is disabled.
+    pub async fn shuffle(&self, enable: bool) -> Result<(), Error> {
+        let mut cmd = self.cmd("Shuffle");
+        if enable {
+            cmd.add_param("state", 1 as u8);
+        } else {
+            cmd.add_param("state", 0 as u8);
+        }
+        self.command(cmd).await?;
+        Ok(())
+    }
+
+    pub async fn repeat(&self, setting: RepeatSetting) -> Result<(), Error> {
+        let mut cmd = self.cmd("Repeat");
+
+        cmd.add_param("state", setting as u8);
+
+        self.command(cmd).await?;
+        Ok(())
+    }
+
+    ///////////////////
+    // Play Queue Management
+    ///////////////////
+    pub async fn queue(&self, pagination: Option<Pagination>) -> Result<Playlist, Error> {
+        let mut cmd = self.cmd("Playlist");
+        match pagination {
+            Some(p) => {
+                cmd.add_param("start", p.start);
+                cmd.add_param("end", p.end);
+            }
+            None => {}
+        };
+        let pl: Playlist = self.command_response(cmd).await?;
+
+        Ok(pl)
+    }
+
+    pub async fn queue_delete_song(&self, position: u64) -> Result<(), Error> {
+        let mut cmd = self.cmd("Delete");
+
+        cmd.add_param("id", position);
+
+        self.command(cmd).await?;
+        Ok(())
+    }
+
+    pub async fn queue_clear(&self) -> Result<(), Error> {
+        let cmd = self.cmd("Clear");
+
+        self.command(cmd).await?;
+        Ok(())
+    }
+}
+
+pub struct Pagination {
+    start: u64,
+    end: u64,
+}
+
+pub enum RepeatSetting {
+    EntireQueue = 0,
+    CurrentTrack = 1,
+    Disable = 2,
 }

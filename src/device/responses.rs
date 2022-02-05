@@ -140,6 +140,7 @@ pub struct Action {
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
+#[serde(rename = "$value")]
 pub enum State {
     Stop,
     Play,
@@ -149,18 +150,86 @@ pub enum State {
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
-#[serde(rename_all = "camelCase")]
+#[serde(rename_all = "camelCase", from = "String")]
 pub enum Quality {
+    /// losless audio at CD quality
     Cd,
+    /// lossless audio with higher resolution that CD quality or samplerate of 88200 samples/s or more
     Hd,
+    /// DolbyDigital or AC3
     DolbyAudio,
+    ///  valid MQA audio decoded
     Mqa,
+    /// valid MQA-Authored audio decoded
     MqaAuthored,
-    Bitrate(i64),
+    /// A numeric value is the approximate bitrate of a compressed audio source quality
+    Compressed(i64),
+}
+
+impl From<String> for Quality {
+    fn from(s: String) -> Self {
+        use Quality::*;
+
+        return match s.as_str() {
+            "cd" => Cd,
+            "hd" => Hd,
+            "dolbyAudio" => DolbyAudio,
+            "mqa" => Mqa,
+            "mqaAuthored" => MqaAuthored,
+            _ => Compressed(s.parse::<i64>().unwrap_or_default()),
+        };
+    }
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct StateResponse {
+    #[serde(rename = "$value")]
     pub state: State,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct IdResponse {
+    #[serde(rename = "$value")]
+    pub id: Option<i64>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Playlist {
+    /// unique id for the current queue state
+    id: i64,
+    /// The current play queue name.
+    name: String,
+    /// 0 means the queue hasn’t been modified since it was loaded.
+    /// 1 means the queue has been modified since it was loaded.
+    modified: i64,
+    /// total number of tracks in the current queue
+    length: i64,
+    #[serde(rename = "$value")]
+    entries: Vec<PlaylistEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct PlaylistEntry {
+    /// track position in the current queue.
+    /// If the track is currently selected, track id is same as <song> in /Status response.
+    pub id: i64,
+    #[serde(rename = "songid")]
+    pub song_id: Option<i64>,
+    /// = id of the album the track is in
+    #[serde(rename = "albumid")]
+    pub album_id: Option<i64>,
+    #[serde(rename = "artistid")]
+    pub artist_id: Option<i64>,
+    pub service: Option<String>,
+
+    pub title: Option<String>,
+    pub art: Option<String>,
+    pub alb: Option<String>,
+    #[serde(rename = "fn")]
+    pub filename: Option<String>,
+    pub quality: Option<Quality>,
 }

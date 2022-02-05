@@ -17,6 +17,9 @@ pub enum Error {
     #[error(transparent)]
     CancelError(#[from] std::sync::mpsc::SendError<bool>),
 
+    #[error("Already discovering using zeroconf")]
+    AlreadyDiscovering,
+
     #[error("IDK BRO")]
     Unknown,
 }
