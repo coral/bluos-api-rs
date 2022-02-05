@@ -5,7 +5,7 @@ use crate::error::Error;
 use command::Command;
 use reqwest::Response;
 use responses::StateResponse;
-pub use responses::{IdResponse, Playlist, State, Status};
+pub use responses::{IdResponse, Playlist, PlaylistEntry, State, Status};
 use serde::Deserialize;
 use std::net::Ipv4Addr;
 
@@ -22,6 +22,9 @@ pub struct BluOS {
 }
 
 impl BluOS {
+    /// Create a new BluOS device from an Ipv4Addr
+    ///
+    /// - If you for some reason managed to make your BluOS device listen on another port, define it using custom_port
     pub fn new(addr: Ipv4Addr, custom_port: Option<u16>) -> Result<BluOS, Error> {
         let port = match custom_port {
             Some(v) => v,
@@ -35,6 +38,7 @@ impl BluOS {
         })
     }
 
+    /// Create a new BluOS device from a discovered device
     #[cfg(feature = "discover")]
     pub fn new_from_discovered(d: DiscoveredBluOSDevice) -> Result<BluOS, Error> {
         Ok(BluOS {
@@ -48,21 +52,29 @@ impl BluOS {
         Command::new(&self.hostname, self.port, action)
     }
 
-    pub async fn command(&self, cmd: Command) -> Result<Response, Error> {
+    /// Send your own command to the BluOS Device
+    async fn command(&self, cmd: Command) -> Result<Response, Error> {
         Ok(self.client.get(cmd.build()).send().await?)
     }
 
-    pub async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
+    /// Send your own command to the BluOS device and expect a response
+    /// The function is generic and uses the type to determine what struct to deserialize to
+    async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
         let t = self.client.get(cmd.build()).send().await?.text().await?;
         Ok(serde_xml_rs::from_str(&t)?)
     }
 
+    /// Get the current status of the BluOS device
     pub async fn status(&self) -> Result<Status, Error> {
         let status: Status = self.command_response(self.cmd("Status")).await?;
 
         Ok(status)
     }
 
+    /// Re-indexes the library
+    ///
+    /// This function is why I wrote this wrapper and once that worked I figured
+    /// why not just keep going and write the rest LOL
     pub async fn update_library(&self) -> Result<(), Error> {
         self.command(self.cmd("Reindex")).await?;
 
@@ -142,6 +154,9 @@ impl BluOS {
         Ok(())
     }
 
+    /// Repeat... repeats
+    ///
+    /// Takes RepeatSetting enum which defines what kind of repeat you need
     pub async fn repeat(&self, setting: RepeatSetting) -> Result<(), Error> {
         let mut cmd = self.cmd("Repeat");
 
@@ -154,6 +169,8 @@ impl BluOS {
     ///////////////////
     // Play Queue Management
     ///////////////////
+
+    /// Get the current play queue from the BluOS device
     pub async fn queue(&self, pagination: Option<Pagination>) -> Result<Playlist, Error> {
         let mut cmd = self.cmd("Playlist");
         match pagination {
@@ -168,6 +185,7 @@ impl BluOS {
         Ok(pl)
     }
 
+    /// Delete a song at POSITION
     pub async fn queue_delete_song(&self, position: u64) -> Result<(), Error> {
         let mut cmd = self.cmd("Delete");
 
@@ -177,6 +195,7 @@ impl BluOS {
         Ok(())
     }
 
+    /// Clear the play queue
     pub async fn queue_clear(&self) -> Result<(), Error> {
         let cmd = self.cmd("Clear");
 

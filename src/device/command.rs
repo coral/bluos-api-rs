@@ -9,6 +9,7 @@ pub struct Command {
 }
 
 impl Command {
+    /// Create a new BluOS device from hostname + port
     pub fn new(hostname: &str, port: u16, command_name: &str) -> Command {
         Command {
             hostname: hostname.to_string(),

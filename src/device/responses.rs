@@ -48,6 +48,7 @@ pub struct Status {
     #[serde(rename = "song")]
     pub song_queue_position: i64,
     /// Quality of the playing source audio:
+    ///
     /// • cd - losless audio at CD quality
     /// • hd – lossless audio with higher resolution that CD quality or samplerate of 88200 samples/s or more
     /// • dolbyAudio – DolbyDigital or AC3
