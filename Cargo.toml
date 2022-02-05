@@ -2,6 +2,11 @@
 name = "bluos-api-rs"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+keywords = ["bluos", "control", "api"]
+categories = ["api-bindings"]
+description = "BluOS API wrappers for Rust"
+repository = "https://github.com/coral/bluos-api-rs"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

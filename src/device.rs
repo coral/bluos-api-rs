@@ -54,7 +54,6 @@ impl BluOS {
 
     pub async fn command_response<'a, T: Deserialize<'a>>(&self, cmd: Command) -> Result<T, Error> {
         let t = self.client.get(cmd.build()).send().await?.text().await?;
-        dbg!(&t);
         Ok(serde_xml_rs::from_str(&t)?)
     }
 

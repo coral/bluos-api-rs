@@ -199,16 +199,16 @@ pub struct IdResponse {
 #[serde(rename_all = "camelCase")]
 pub struct Playlist {
     /// unique id for the current queue state
-    id: i64,
+    pub id: i64,
     /// The current play queue name.
-    name: String,
+    pub name: String,
     /// 0 means the queue hasn’t been modified since it was loaded.
     /// 1 means the queue has been modified since it was loaded.
-    modified: i64,
+    pub modified: i64,
     /// total number of tracks in the current queue
-    length: i64,
+    pub length: i64,
     #[serde(rename = "$value")]
-    entries: Vec<PlaylistEntry>,
+    pub entries: Vec<PlaylistEntry>,
 }
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
