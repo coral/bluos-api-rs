@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Result,Context};
 use bluos_api_rs::{BluOS, Discovery};
 
 #[tokio::main]
@@ -8,23 +8,24 @@ async fn main() -> Result<()> {
 
     // Manually is boring, let's use mDNS to discover this!
     // Find the first device in our network
-    let device = Discovery::discover_one().await?;
+    let device = Discovery::discover_one().await.context("discover_one")?;
 
     // Create a new BluOS device from the discovered address
-    let bluos = BluOS::new_from_discovered(device)?;
+    let bluos = BluOS::new_from_discovered(device).context("new_from_discovered")?;
+    println!("discovered: {bluos:?}");
 
     // Print the status
-    let status = bluos.status().await?;
+    let status = bluos.status().await.context("status")?;
     dbg!(status);
 
     // List items in the play queue
-    let playlist = bluos.queue(None).await?;
+    let playlist = bluos.queue(None).await.context("queue")?;
     for n in playlist.entries {
         println!("{}", n.title.unwrap_or_default());
     }
 
     // Resume playback
-    bluos.play().await?;
+    // bluos.play().await?;
 
     Ok(())
 }

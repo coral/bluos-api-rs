@@ -12,7 +12,7 @@ pub struct Status {
     pub volume: i64,
     /// Volume in decibel
     #[serde(rename = "db")]
-    pub volume_decibel: i64,
+    pub volume_decibel: f64,
     /// Mute state. Set to 1 if volume is muted
     pub mute: u8,
     /// If the player is muted, then this contains the unmuted volume level.
@@ -202,7 +202,7 @@ pub struct Playlist {
     /// unique id for the current queue state
     pub id: i64,
     /// The current play queue name.
-    pub name: String,
+    pub name: Option<String>,
     /// 0 means the queue hasn’t been modified since it was loaded.
     /// 1 means the queue has been modified since it was loaded.
     pub modified: i64,
@@ -219,12 +219,12 @@ pub struct PlaylistEntry {
     /// If the track is currently selected, track id is same as <song> in /Status response.
     pub id: i64,
     #[serde(rename = "songid")]
-    pub song_id: Option<i64>,
+    pub song_id: Option<String>,
     /// = id of the album the track is in
     #[serde(rename = "albumid")]
-    pub album_id: Option<i64>,
+    pub album_id: Option<String>,
     #[serde(rename = "artistid")]
-    pub artist_id: Option<i64>,
+    pub artist_id: Option<String>,
     pub service: Option<String>,
 
     pub title: Option<String>,

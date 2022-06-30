@@ -14,6 +14,7 @@ use crate::DiscoveredBluOSDevice;
 
 // Documented here
 // https://bluos.net/wp-content/uploads/2021/03/Custom-Integration-API-v1.0_March-2021.pdf
+#[derive(Debug)]
 pub struct BluOS {
     hostname: String,
     port: u16,
