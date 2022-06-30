@@ -1,4 +1,4 @@
-use anyhow::{Result,Context};
+use anyhow::{Context, Result};
 use bluos_api_rs::{BluOS, Discovery};
 
 #[tokio::main]
@@ -19,9 +19,22 @@ async fn main() -> Result<()> {
     dbg!(status);
 
     // List items in the play queue
+    println!("Queue:");
     let playlist = bluos.queue(None).await.context("queue")?;
     for n in playlist.entries {
         println!("{}", n.title.unwrap_or_default());
+    }
+    println!();
+
+    println!("Browse:");
+    let browse = bluos.browse(None).await.context("browse")?;
+    for item in browse.items {
+        println!("{} ({:?})", item.text.unwrap_or_default(), item.item_type);
+        if item.browse_key.is_some() {
+            for item in bluos.browse(item.browse_key.as_deref()).await?.items {
+                println!("  {}", item.text.unwrap_or_default());
+            }
+        }
     }
 
     // Resume playback

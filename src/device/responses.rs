@@ -234,3 +234,34 @@ pub struct PlaylistEntry {
     pub filename: Option<String>,
     pub quality: Option<Quality>,
 }
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct Browse {
+    pub sid: String,
+    #[serde(rename = "type")]
+    pub browse_type: String,
+
+    #[serde(rename = "$value")]
+    pub items: Vec<BrowseItem>,
+}
+
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub struct BrowseItem {
+    pub image: Option<String>,
+    pub service_icon: Option<String>,
+    pub service_name: Option<String>,
+    pub search_key: Option<String>,
+    pub next_key: Option<String>,
+    pub parent_key: Option<String>,
+    pub browse_key: Option<String>,
+    pub text: Option<String>,
+    pub text2: Option<String>,
+    #[serde(rename = "type")]
+    pub item_type: Option<String>,
+    pub play_url: Option<String>,
+    pub autoplay_url: Option<String>,
+    pub context_menu_key: Option<String>,
+    pub action_url: Option<String>,
+}
