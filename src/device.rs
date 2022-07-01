@@ -5,7 +5,7 @@ use crate::error::Error;
 use command::Command;
 use reqwest::Response;
 use responses::StateResponse;
-pub use responses::{IdResponse, Playlist, PlaylistEntry, State, Status};
+pub use responses::{Browse, IdResponse, Playlist, PlaylistEntry, State, Status};
 use serde::Deserialize;
 use std::net::Ipv4Addr;
 
@@ -14,6 +14,7 @@ use crate::DiscoveredBluOSDevice;
 
 // Documented here
 // https://bluos.net/wp-content/uploads/2021/03/Custom-Integration-API-v1.0_March-2021.pdf
+#[derive(Debug)]
 pub struct BluOS {
     hostname: String,
     port: u16,
@@ -69,6 +70,13 @@ impl BluOS {
         let status: Status = self.command_response(self.cmd("Status")).await?;
 
         Ok(status)
+    }
+
+    pub async fn browse(&self, key: Option<&str>) -> Result<Browse, Error> {
+        let mut cmd = self.cmd("Browse");
+        cmd.add_optional("key", key);
+        let browse: Browse = self.command_response(cmd).await?;
+        Ok(browse)
     }
 
     /// Re-indexes the library
