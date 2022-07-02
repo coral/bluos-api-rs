@@ -1,8 +1,14 @@
-use anyhow::{Context, Result};
-use bluos_api_rs::{BluOS, Discovery};
+#[cfg(not(feature = "discover"))]
+fn main() {
+    println!("This example needs the discover feature to be enabled");
+}
 
+#[cfg(feature = "discover")]
 #[tokio::main]
-async fn main() -> Result<()> {
+async fn main() -> anyhow::Result<()> {
+    use anyhow::Context;
+    use bluos_api_rs::{BluOS, Discovery};
+
     // Doing it manually
     //let bluos = BluOS::new(Ipv4Addr::from_str("10.0.1.36")?, None).await?;
 

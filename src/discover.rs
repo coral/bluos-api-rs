@@ -1,26 +1,22 @@
+#![cfg(feature = "discover")]
 use crate::error::Error;
 use std::any::Any;
 use std::sync::Arc;
 use std::time::Duration;
-#[cfg(feature = "discover")]
 use tokio::sync::mpsc::{self, Receiver};
-#[cfg(feature = "discover")]
 use zeroconf::prelude::*;
-#[cfg(feature = "discover")]
 use zeroconf::{MdnsBrowser, ServiceDiscovery, ServiceType};
 
-#[cfg(feature = "discover")]
 pub struct DiscoveredBluOSDevice {
     pub name: String,
     pub hostname: String,
     pub port: u16,
 }
 
-#[cfg(feature = "discover")]
 pub struct Discovery {
     cancel: Option<std::sync::mpsc::Sender<bool>>,
 }
-#[cfg(feature = "discover")]
+
 impl Discovery {
     pub fn new() -> Discovery {
         Discovery { cancel: None }
@@ -86,7 +82,6 @@ impl Discovery {
     }
 }
 
-#[cfg(feature = "discover")]
 impl Drop for Discovery {
     fn drop(&mut self) {
         match &self.cancel {
