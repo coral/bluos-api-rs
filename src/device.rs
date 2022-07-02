@@ -7,7 +7,7 @@ use reqwest::Response;
 use responses::StateResponse;
 pub use responses::{Browse, IdResponse, Playlist, PlaylistEntry, State, Status};
 use serde::Deserialize;
-use std::net::Ipv4Addr;
+use std::net::{Ipv4Addr, SocketAddr};
 
 #[cfg(feature = "discover")]
 use crate::DiscoveredBluOSDevice;
@@ -35,6 +35,14 @@ impl BluOS {
         Ok(BluOS {
             hostname: addr.to_string(),
             port,
+            client: reqwest::Client::new(),
+        })
+    }
+
+    pub fn with_socket_addr(addr: SocketAddr) -> Result<BluOS, Error> {
+        Ok(BluOS {
+            hostname: addr.ip().to_string(),
+            port: addr.port(),
             client: reqwest::Client::new(),
         })
     }
